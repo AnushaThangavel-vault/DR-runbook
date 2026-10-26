@@ -1,0 +1,477 @@
+<div class="app-shell">
+  <header class="global-header">
+    <div class="brand-group">
+      <span class="brand-mark" aria-hidden="true">H</span>
+      <span>HashiCorp</span>
+      <button class="project-switcher" type="button">project-name⌄</button>
+    </div>
+    <div class="header-actions">
+      <span>Notifications</span>
+      <span class="avatar" aria-label="Signed in as AB">AB</span>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <aside class="sidebar" aria-label="Cluster navigation">
+      <Hds::Button
+        @text="Back to main navigation"
+        @color="tertiary"
+        @icon="arrow-left"
+        {{on "click" this.returnToOverview}}
+      />
+      <div class="sidebar-section">
+        <p class="sidebar-label">vault-cluster</p>
+        <a class="sidebar-link" href="#overview">Overview</a>
+        <a class="sidebar-link" href="#replication">Replication</a>
+        <a
+          class="sidebar-link is-current"
+          href="#disaster-recovery"
+          aria-current="page"
+        >Disaster recovery</a>
+        <a class="sidebar-link" href="#networking">Networking</a>
+      </div>
+      <div class="sidebar-section">
+        <p class="sidebar-label">Manage</p>
+        <a class="sidebar-link" href="#integrations">Integrations</a>
+        <a class="sidebar-link" href="#manage-networking">Networking</a>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="content-width">
+        {{#if this.isEditing}}
+          <nav class="breadcrumb" aria-label="Breadcrumb">
+            <span>vault-design-cluster</span>
+            <span aria-hidden="true">/</span>
+            <button type="button" {{on "click" this.cancelEdit}}>DR Runbook</button>
+            <span aria-hidden="true">/</span>
+            <span>Edit runbook</span>
+          </nav>
+
+          <div class="edit-heading">
+            <div>
+              <h1>Edit disaster recovery runbook</h1>
+              <p>
+                Customize how your organization executes disaster recovery. Add
+                custom steps between Vault-managed actions while keeping the
+                required recovery sequence intact.
+              </p>
+            </div>
+            <Hds::Button
+              @text="Reset system steps"
+              @color="secondary"
+              {{on "click" this.resetSystemSteps}}
+            />
+          </div>
+
+          <div class="precheck-note">
+            <Hds::Alert @type="inline" @color="highlight" as |A|>
+              <A.Title>Pre-checks run automatically before execution</A.Title>
+              <A.Description>
+                Vault verifies cluster health, replication status, cluster
+                availability, and DR secondary readiness before starting the
+                runbook. These checks are not editable runbook steps.
+              </A.Description>
+            </Hds::Alert>
+          </div>
+
+          <div class="section-heading">
+            <h2>Runbook steps</h2>
+            <Hds::Button
+              @text="Add custom step"
+              @color="secondary"
+              @icon="plus"
+              {{on "click" this.addCustomStep}}
+            />
+          </div>
+
+          <div class="step-list">
+            {{#each this.stepsWithMetadata as |step|}}
+              <article class="step-card">
+                <span class="step-number">{{step.position}}</span>
+                <div class="step-content">
+                  <div class="status-line">
+                    <Hds::Badge
+                      @text={{if step.isCustom "Custom step" "System step"}}
+                      @color={{if step.isCustom "highlight" "neutral"}}
+                      @type="outlined"
+                      @size="small"
+                    />
+                  </div>
+                  {{#if step.isCustom}}
+                    <div class="custom-step-fields">
+                      <Hds::Form::TextInput::Field
+                        @value={{step.title}}
+                        @isRequired={{true}}
+                        {{on "input" (fn this.updateStepTitle step.id)}}
+                        as |F|
+                      >
+                        <F.Label>Step name</F.Label>
+                      </Hds::Form::TextInput::Field>
+                      <Hds::Form::Textarea::Field
+                        @value={{step.description}}
+                        @height="100px"
+                        {{on "input" (fn this.updateStepDescription step.id)}}
+                        as |F|
+                      >
+                        <F.Label>Instructions</F.Label>
+                      </Hds::Form::Textarea::Field>
+                    </div>
+                  {{else}}
+                    <h3>{{step.title}}</h3>
+                    <p>{{step.description}}</p>
+                  {{/if}}
+                </div>
+                {{#if step.isCustom}}
+                  <Hds::Button
+                    @text="Remove"
+                    @color="secondary"
+                    @size="small"
+                    {{on "click" (fn this.removeCustomStep step.id)}}
+                  />
+                {{else}}
+                  <span class="step-kind">Managed by Vault</span>
+                {{/if}}
+              </article>
+            {{/each}}
+          </div>
+
+          {{#if this.validationMessage}}
+            <p class="error-message" role="alert">{{this.validationMessage}}</p>
+          {{/if}}
+
+          <div class="edit-footer">
+            <Hds::Button
+              @text="Cancel"
+              @color="secondary"
+              {{on "click" this.cancelEdit}}
+            />
+            <Hds::Button @text="Save changes" {{on "click" this.saveEdit}} />
+          </div>
+        {{else}}
+          <nav class="breadcrumb" aria-label="Breadcrumb">
+            <span>org-name</span>
+            <span aria-hidden="true">/</span>
+            <span>Vault</span>
+            <span aria-hidden="true">/</span>
+            <span>DR Runbook</span>
+          </nav>
+
+          <div class="page-heading">
+            <div class="page-title-group">
+              <Hds::Icon @name="vault" @size="24" />
+              <h1>DR Runbook</h1>
+            </div>
+            <div class="page-actions">
+              <Hds::Button
+                @text="Edit runbook"
+                @color="secondary"
+                @icon="edit"
+                {{on "click" this.openEdit}}
+              />
+              <Hds::Button
+                @text="Start DR runbook"
+                @icon="play"
+                {{on "click" this.openRunbook}}
+              />
+            </div>
+          </div>
+
+          <Hds::Tabs
+            @selectedTabIndex={{this.activeTab}}
+            @onClickTab={{this.selectTab}}
+            as |T|
+          >
+            <T.Tab>Overview</T.Tab>
+            <T.Tab>Runbook checklist</T.Tab>
+
+            <T.Panel as |isVisible|>
+              {{#if isVisible}}
+                <div class="history-table">
+                  <Hds::Table @caption="Disaster recovery operation history">
+                    <:head as |H|>
+                      <H.Tr>
+                        <H.Th>Operation</H.Th>
+                        <H.Th>Started by</H.Th>
+                        <H.Th>Started</H.Th>
+                        <H.Th>Result</H.Th>
+                        <H.Th>Comments</H.Th>
+                      </H.Tr>
+                    </:head>
+                    <:body as |B|>
+                      {{#each this.historyWithMetadata as |run|}}
+                        <B.Tr>
+                          <B.Td>{{run.operation}}</B.Td>
+                          <B.Td>{{run.startedBy}}</B.Td>
+                          <B.Td>{{run.started}}</B.Td>
+                          <B.Td>
+                            <Hds::Badge
+                              @text={{run.result}}
+                              @color={{if run.isFailed "critical" "success"}}
+                              @size="small"
+                            />
+                          </B.Td>
+                          <B.Td><span
+                              class="history-comments"
+                            >{{run.comments}}</span></B.Td>
+                        </B.Tr>
+                      {{/each}}
+                    </:body>
+                  </Hds::Table>
+                </div>
+              {{/if}}
+            </T.Panel>
+
+            <T.Panel as |isVisible|>
+              {{#if isVisible}}
+                <div class="precheck-note">
+                  <Hds::Alert @type="inline" @color="highlight" as |A|>
+                    <A.Title>Pre-checks run automatically before execution</A.Title>
+                    <A.Description>
+                      Cluster health · Replication status · Cluster availability
+                      · DR secondary readiness
+                    </A.Description>
+                  </Hds::Alert>
+                </div>
+
+                <p class="flow-intro">
+                  Steps run in sequence when you start the DR runbook. System
+                  steps are Vault-managed CLI operations; custom steps require
+                  operator action outside Vault.
+                </p>
+
+                <div class="step-list">
+                  {{#each this.stepsWithMetadata as |step|}}
+                    <article class="step-card">
+                      <span class="step-number">{{step.position}}</span>
+                      <div class="step-content">
+                        <div class="status-line">
+                          <h3>{{step.title}}</h3>
+                          {{#if step.isCustom}}
+                            <Hds::Badge
+                              @text="Custom step"
+                              @color="highlight"
+                              @type="outlined"
+                              @size="small"
+                            />
+                          {{/if}}
+                        </div>
+                        <p>{{step.description}}</p>
+                        {{#if step.command}}
+                          <pre class="command-block"><code
+                            >{{step.command}}</code></pre>
+                        {{/if}}
+                      </div>
+                      {{#if step.command}}
+                        <Hds::Button
+                          @text="Copy"
+                          @color="tertiary"
+                          @size="small"
+                          @icon="clipboard-copy"
+                          {{on "click" (fn this.copyCommand step.id)}}
+                        />
+                      {{/if}}
+                    </article>
+                  {{/each}}
+                </div>
+                {{#if this.copyMessage}}
+                  <p class="copy-message" role="status">{{this.copyMessage}}</p>
+                {{/if}}
+              {{/if}}
+            </T.Panel>
+          </Hds::Tabs>
+        {{/if}}
+      </div>
+    </main>
+  </div>
+
+  {{#if this.modalMode}}
+    <Hds::Modal
+      id="dr-runbook-flow-modal"
+      @size="large"
+      @onClose={{this.closeModal}}
+      as |M|
+    >
+      <M.Header>{{this.modalTitle}}</M.Header>
+      <M.Body>
+        {{#if this.isChoosingOperation}}
+          <p class="flow-intro">Select the type of failover operation to run.</p>
+          <div class="operation-options">
+            <button
+              class="operation-option"
+              type="button"
+              {{on "click" (fn this.chooseOperation "emergency")}}
+            >
+              <strong>Emergency failover</strong>
+              <span>Recover service when the primary is unavailable or cannot
+                safely serve traffic.</span>
+            </button>
+            <button
+              class="operation-option"
+              type="button"
+              {{on "click" (fn this.chooseOperation "test")}}
+            >
+              <strong>Test failover</strong>
+              <span>Run a planned DR exercise using the same promotion
+                mechanics. Production traffic is unaffected.</span>
+            </button>
+          </div>
+        {{else if this.isPrechecking}}
+          <div class="flow-step-heading">
+            <span class="flow-step-index">1</span>
+            <div>
+              <h3>Checklist</h3>
+              <span class="step-kind">Step 1 of 1 · Confirm &amp; pre-checks</span>
+            </div>
+          </div>
+
+          <Hds::Alert @type="inline" @color="highlight" as |A|>
+            <A.Title>Primary cluster change</A.Title>
+            <A.Description>
+              {{this.operationLabel}}
+              will replace the current primary
+              <span class="cluster-name">vault-us-east</span>
+              with DR secondary
+              <span class="cluster-name">vault-us-west</span>.
+            </A.Description>
+          </Hds::Alert>
+
+          <div class="cluster-summary">
+            <strong>Secondary clusters to reroute:</strong>
+            <Hds::Badge @text="2 performance secondaries" @color="highlight" />
+            <span>vault-eu-west and vault-ap-south must reconnect to the new
+              primary for performance replication to resume.</span>
+          </div>
+
+          <div class="estimate-row">
+            <span>Estimated completion time</span>
+            <strong>{{this.operationEstimate}}</strong>
+          </div>
+
+          <Hds::Alert @type="inline" @color="warning" as |A|>
+            <A.Title>Custom step timing is not included</A.Title>
+            <A.Description>
+              Custom steps require operator action. Their completion time cannot
+              be calculated and is not included in this estimate.
+            </A.Description>
+          </Hds::Alert>
+
+          <section aria-labelledby="preflight-heading">
+            <h3 id="preflight-heading">System checks</h3>
+            <ul class="preflight-list">
+              {{#each this.preflightChecks as |check|}}
+                <li>
+                  <span>{{check.title}}</span>
+                  <span class="preflight-detail">{{check.detail}}</span>
+                </li>
+              {{/each}}
+            </ul>
+          </section>
+        {{else if this.isRunningChecklist}}
+          <div class="flow-step-heading">
+            <span class="flow-step-index">1</span>
+            <div>
+              <h3>Checklist</h3>
+              <span class="step-kind">Step 1 of 1 ·
+                {{this.operationLabel}}</span>
+            </div>
+          </div>
+
+          <p class="flow-intro">
+            Confirm each action as it is completed. This single checklist
+            contains the runbook steps; there is no topology preview.
+          </p>
+          <div class="estimate-row">
+            <span>Estimated completion time</span>
+            <strong>{{this.operationEstimate}}</strong>
+          </div>
+          <Hds::Alert @type="inline" @color="warning" as |A|>
+            <A.Title>Custom step timing is not included</A.Title>
+            <A.Description>
+              Custom steps require operator action. Their completion time cannot
+              be calculated and is not included in this estimate.
+            </A.Description>
+          </Hds::Alert>
+          <p class="checklist-count">
+            {{this.checkedStepCount}}
+            of
+            {{this.runbookSteps.length}}
+            items completed
+          </p>
+          <div class="checklist-items">
+            {{#each this.stepsWithMetadata as |step|}}
+              <div class="checklist-item">
+                <Hds::Form::Checkbox::Field
+                  @value={{step.id}}
+                  checked={{this.isStepChecked step.id}}
+                  {{on "change" (fn this.toggleChecklistStep step.id)}}
+                  as |F|
+                >
+                  <F.Label>{{step.title}}</F.Label>
+                  {{#if step.description}}
+                    <F.HelperText>{{step.description}}</F.HelperText>
+                  {{/if}}
+                </Hds::Form::Checkbox::Field>
+              </div>
+            {{/each}}
+          </div>
+        {{else if this.isComplete}}
+          <div class="success-panel">
+            <h3>Runbook completed</h3>
+            <p>
+              {{this.operationLabel}}
+              completed and was added to operation history.
+            </p>
+          </div>
+        {{/if}}
+
+        {{#if this.validationMessage}}
+          <p class="error-message" role="alert">{{this.validationMessage}}</p>
+        {{/if}}
+      </M.Body>
+      <M.Footer as |F|>
+        <div class="modal-footer">
+          {{#if this.isPrechecking}}
+            <Hds::Button
+              @text="Back"
+              @color="secondary"
+              {{on "click" this.openRunbook}}
+            />
+            <div class="footer-actions">
+              <Hds::Button
+                @text="Cancel"
+                @color="secondary"
+                {{on "click" F.close}}
+              />
+              <Hds::Button
+                @text="Continue to checklist"
+                {{on "click" this.beginChecklist}}
+              />
+            </div>
+          {{else if this.isRunningChecklist}}
+            <Hds::Button
+              @text="Cancel run"
+              @color="secondary"
+              {{on "click" F.close}}
+            />
+            <Hds::Button
+              @text="Complete runbook"
+              {{on "click" this.completeOperation}}
+            />
+          {{else if this.isComplete}}
+            <Hds::Button
+              @text="Return to overview"
+              {{on "click" this.returnToOverview}}
+            />
+          {{else}}
+            <Hds::Button
+              @text="Cancel"
+              @color="secondary"
+              {{on "click" F.close}}
+            />
+          {{/if}}
+        </div>
+      </M.Footer>
+    </Hds::Modal>
+  {{/if}}
+</div>
